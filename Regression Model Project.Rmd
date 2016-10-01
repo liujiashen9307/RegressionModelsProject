@@ -1,0 +1,82 @@
+---
+title: "Regression Model Project"
+author: 'Jason Liu'
+date: "Oct 1, 2016"
+output: html_document
+---
+**Statement** This is the graduation project of Coursera course: Regression models, taught by JHU. The project can be viewed as a demonstration of regression techniques. 
+
+### Load Data and Related Packages
+```{r,message=FALSE,warning=FALSE}
+library(datasets)
+library(ggplot2)
+library(GGally)
+data(mtcars)
+```
+### Data Exploration
+First step of regression analysis is to explore the dataset. With the built-in function 'head' we quickly have a look into th dataset.
+```{r,message=FALSE,warning=FALSE}
+head(mtcars)
+```
+Subsquently, we plot the 'pair plots' of each variables in order to understand the correlations among different variables. (See Appendix) The variable,MPG, the abbreviation of 'Mile per Gallon', serves as the response variable of the model. Before ploting, we need to transfer two variables 'vs' and 'am' to the forms of factors as they do not have numeric meanings.
+```{r,message=FALSE,warning=FALSE,echo=FALSE}
+mtcars$vs<-as.factor(mtcars$vs);mtcars$am<-as.factor(mtcars$am)
+Newdt<-mtcars[,c(1:7,10,11)]
+```
+It is obvious that some variables are distributed discretely (i.e. cyl) while others are quite continous. The box plot is generated in order to briefly explore the oil consumptions of auto gear and mannual gear cars.
+```{r,message=FALSE,warning=FALSE}
+tmpData<-mtcars[,c(1,9)]
+tmpData$am<-ifelse(tmpData$am=='1',tmpData$am<-'Auto',tmpData$am<-'Manual')
+boxplot(mpg ~ am, data = tmpData, xlab = "Transmission")
+```
+
+It is obvious that the auto gear car is always more gas-consuming. Before running the regression, we have already known the relationship between MPG and gear types to some extents.
+
+###Regression Analysis
+The next step is to run regression analysis on the dataset. We first select several continous variables and see the regression plots beween the response variable and each of them. 
+
+```{r,echo=FALSE,warning=FALSE,message=FALSE}
+ggpairs(Newdt,columns =c('mpg','disp','hp','drat','wt','qsec'),
+        lower = list(continuous = "smooth",method='lm'))
+```
+
+The first column of the plot shows the regression plots of the response variable and each individual variable. It is good to see that except for the variable 'qsec', the regession lines between 'mpg' and other variables look good. Visually judged, the outlier with huge leverage does not have profound impact on the results. However, through the other columns of the plot, we can find that there are strong correlations existing among some features, which could result in multicolinearity if all features are included in the regression function.
+
+We first create a regression model with the inclusion of all variables. The summary of model is presented below. Also, we plot the diagnostic plots of the regression.
+
+```{r,echo=FALSE}
+reg<-lm(mpg~.,data=mtcars)
+summary(reg)
+par(mfrow=c(2,2))
+plot(reg)
+```
+The influences of features on response variables are not statistically significiant if we have a look into the p values. However, considering we just have 32 rows of data for the regression, the p values do not mean everything. The adjusted R square is not bad, and the diagnostic of residuals reveals several facts: the residuals are patternless and normally distributed, which is a good sign of the model-fitting; the outliers with high leverage do not have a huge impact on the variance of residuals etc. Through the coefficients of features, we can find that 'drat', 'wt','aml' and 'gear' etc. have stong impacts on the dependent variable. Therefore, we use 'step' function to automatically choose the regressors that should be included in the model.
+
+```{r,warning=FALSE,message=FALSE,eval=FALSE}
+reg_adjusted<- step(reg,direction = 'both')
+```
+```{r,echo=FALSE}
+reg_adjusted<-lm(mpg ~ wt + qsec + am,data=mtcars)
+summary(reg_adjusted)
+```
+
+The adjusted model incorporates three variables: 'wt','qsec' and 'am'. The summary of new model reveals a fact that the new model is way better than the previous one from the perspects of R-squared and p values. We also performs the diagnosis of residuals for the new model.
+
+```{r, message=FALSE,warning=FALSE}
+par(mfrow=c(2,2))
+plot(reg_adjusted)
+```
+
+The diagnosis of residuals is quite similar with the previous one. But one obvious problem is identified that a outlier may exist in the dataset since the residual-leverage plot contains a point with both high leverage and influence. The problem becomes obvious as the quantity of variables shrinks.
+
+###Conclusion
+In short, we can conclude that:
+1. The type of transmission really has impact on the consumption of gasoline. Specifically, the auto transmission car will consume more gas.
+2. Not all features in the dataset contributes a lot to the response variable. However, considering that the limited size of dataset, we cannot make a concrete conclusion regarding the inclusion of variables.
+
+###Appendix
+Pairs plot of variables.
+
+```{r,echo=FALSE}
+pairs(Newdt)
+```
